@@ -99,6 +99,32 @@ def get_layer_id_for_vit(var_name, max_layer_id):
         return max_layer_id - 1
 
 
+def get_num_layer_for_vit_adapter(var_name, num_max_layer):
+    if var_name in ('backbone.cls_token', 'backbone.mask_token',
+                    'backbone.pos_embed'):
+        return 0
+    elif var_name.startswith('backbone.patch_embed'):
+        return 0
+    elif var_name.startswith('decode_head.mask_embed'):
+        return 0
+    elif var_name.startswith('decode_head.cls_embed'):
+        return 0
+    elif var_name.startswith('decode_head.level_embed'):
+        return 0
+    elif var_name.startswith('decode_head.query_embed'):
+        return 0
+    elif var_name.startswith('decode_head.query_feat'):
+        return 0
+    elif var_name.startswith('backbone.blocks'):
+        layer_id = int(var_name.split('.')[2])
+        return layer_id + 1
+    elif var_name.startswith('backbone.layers'):
+        layer_id = int(var_name.split('.')[2])
+        return layer_id + 1
+    else:
+        return num_max_layer - 1
+
+
 @OPTIMIZER_BUILDERS.register_module()
 class LearningRateDecayOptimizerConstructor(DefaultOptimizerConstructor):
     """Different learning rates are set for different layers of backbone.
@@ -143,8 +169,11 @@ class LearningRateDecayOptimizerConstructor(DefaultOptimizerConstructor):
                     layer_id = get_layer_id_for_convnext(
                         name, self.paramwise_cfg.get('num_layers'))
                     logger.info(f'set param {name} as id {layer_id}')
+                elif 'Adapter' in module.backbone.__class__.__name__:
+                    layer_id = get_num_layer_for_vit_adapter(name, num_layers)
+                    logger.info(f'set param {name} as id {layer_id}')
                 elif 'BEiT' in module.backbone.__class__.__name__ or \
-                     'MAE' in module.backbone.__class__.__name__:
+                        'MAE' in module.backbone.__class__.__name__:
                     layer_id = get_layer_id_for_vit(name, num_layers)
                     logger.info(f'set param {name} as id {layer_id}')
                 else:
